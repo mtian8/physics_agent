@@ -61,6 +61,100 @@ Or run multiple cycles:
 python -m src.main run --run <run_id> --max-cycles 8
 ```
 
+## End-to-end walkthrough (recommended)
+
+This is the most common “plan → run → review → iterate → finalize” loop.
+
+### 0) Put your question in a file (recommended)
+
+Create `question.md` (Markdown/TeX is fine):
+```bash
+cat > question.md <<'MD'
+<paste your full research question here>
+MD
+```
+
+### 1) Init (creates the Research State Doc)
+
+```bash
+python -m src.main init --question-file question.md --problem configs/problem_spec.md
+```
+
+This prints a `<run_id>` and creates `artifacts/runs/<run_id>/RESEARCH_STATE.md`.
+
+### 2) Review/edit the plan (this is the “proposal” step)
+
+Open `artifacts/runs/<run_id>/RESEARCH_STATE.md` and edit **only** the YAML under:
+- `## Task Graph (machine-readable)`
+
+Edits that change execution:
+- **serial vs parallel** within a stage: add `depends_on`
+- route a task to a different subagent: change `task.agent`
+- change quality gates: edit `acceptance_criteria` (task) and `stage.verifier.criteria` (stage)
+
+Edits that do *not* change execution:
+- the Task Board (it’s regenerated)
+- freeform notes elsewhere in the doc
+
+### 3) Configure how tasks are reviewed / judged (optional but recommended)
+
+Defaults are in `configs/agents.yaml`. You can edit YAML directly or use the controller.
+
+Common setup:
+```bash
+# Require human approval for a specific agent’s tasks:
+python -m src.controller set-review --agent paper_reader --policy human
+
+# Enable task-level LLM judging for a specific agent’s tasks:
+python -m src.controller set-task-verify --agent derivation_coder --policy llm
+
+# Require final human sign-off for the “final report task” (default is 3.1):
+python -m src.controller set-review --task 3.1 --policy human
+```
+
+### 4) (Optional) Add papers and enable retrieval
+
+If you want `paper_reader` / `verifier` to use OpenAI FileSearch:
+1) set `vector_store_id` in `configs/agents.yaml`
+2) ingest PDFs:
+```bash
+python -m src.main ingest --run <run_id> --docs /path/to/paper1.pdf --docs /path/to/paper2.pdf
+```
+
+### 5) Run one cycle at a time (recommended for HITL)
+
+```bash
+python -m src.main step --run <run_id>
+```
+
+Repeat `step` until it stops. Typical stop reasons:
+- `awaiting_human_review`: at least one task is blocked for your approval/modification
+- `verifier_blocked`: a task-level judge or stage verifier returned non-PASS and follow-ups were injected
+- `complete`: all stages finished and the final verifier ran
+
+### 6) Review → approve/modify → resume
+
+When stopped for review:
+```bash
+python -m src.controller review-queue --run <run_id>
+python -m src.controller approve --run <run_id> --task 1.2
+# or:
+# python -m src.controller modify --run <run_id> --task 1.2 --summary-file your_notes.txt
+python -m src.main step --run <run_id>
+```
+
+When blocked by verification (`verifier_blocked`):
+- open `artifacts/runs/<run_id>/RESEARCH_STATE.md`
+- check `## Verifier status` + the task’s `- issues:`
+- follow-up tasks were added to the Task Graph; you can edit the YAML if you want a different plan, then run `step` again
+
+### 7) Read the outputs
+
+Everything you need to read/share is under `artifacts/runs/<run_id>/`:
+- `final_output.md` (Question + Summary + Final Result)
+- `final_report.md` (if the Task Graph wrote it; default task is `3.1`)
+- `RESEARCH_STATE.md` (audit log + task graph + ledgers)
+
 ## Quickstart (Restate durable mode)
 
 Restate gives crash-safe retries + suspend/resume for human review.
