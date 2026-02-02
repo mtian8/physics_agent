@@ -1,0 +1,6 @@
+openai
+openai-agents
+pydantic
+pyyaml
+restate_sdk[serde]
+hypercorn

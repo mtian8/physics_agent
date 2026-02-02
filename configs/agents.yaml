@@ -1,0 +1,67 @@
+models:
+  default: "gpt-4.1-mini"
+  orchestrator: "gpt-4.1-mini"
+  literature_scout: "gpt-4.1-mini"
+  paper_reader: "gpt-4.1-mini"
+  derivation_coder: "gpt-4.1-mini"
+  verifier: "gpt-4.1-mini"
+
+# Optional OpenAI Vector Store id for FileSearchTool
+vector_store_id: ""
+
+# Optional model settings (merged: default -> per_agent)
+model_settings:
+  default:
+    temperature: 0.2
+    parallel_tool_calls: true
+  per_agent: {}
+
+# Prompt overrides
+prompts:
+  default_dir: "prompts"
+  per_agent:
+    orchestrator: "prompts/orchestrator.md"
+    literature_scout: "prompts/literature_scout.md"
+    paper_reader: "prompts/paper_reader.md"
+    derivation_coder: "prompts/derivation_coder.md"
+    verifier: "prompts/verifier.md"
+
+# Human review policy: auto or human
+review:
+  default: "auto"
+  per_agent: {}
+  per_task: {}
+
+# Optional task-level self-verification using the Verifier agent as an LLM judge.
+# Values: none | llm
+task_verification:
+  default: "none"
+  per_agent: {}
+  per_task: {}
+
+# Provider config (empty strings mean "use default envs")
+providers:
+  default:
+    openai:
+      api_key: ""
+      base_url: ""
+      organization: ""
+      project: ""
+      use_responses: true
+  per_agent: {}
+
+# Optional tool selection per agent. If omitted, sensible defaults are used:
+# - literature_scout: web_search
+# - paper_reader: file_search (requires vector_store_id)
+# - derivation_coder: code_interpreter
+# - verifier: file_search + code_interpreter
+# - orchestrator: none
+tools:
+  # default: null means "use built-in defaults" (see comment above).
+  default: null
+  per_agent: {}
+
+# Code Interpreter tool (OpenAI-hosted sandbox) defaults.
+# memory_limit: "1g" | "4g" | "16g" | "64g" (optional)
+code_interpreter:
+  memory_limit: "1g"
